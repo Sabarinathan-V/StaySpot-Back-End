@@ -79,7 +79,7 @@ app.post("/login", async (req, res) => {
           (error, token) => {
             if (error) throw error;
             res
-              .cookie("token", token)
+              .cookie("token", token, {secure:true, sameSite:'none'})
               .json({
                 _id: userDoc._id,
                 email: userDoc.email,
