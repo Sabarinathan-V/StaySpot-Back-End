@@ -99,17 +99,15 @@ app.post("/login", async (req, res) => {
 });
 
 // To set user details available after login
-app.get("/profile", (req, res) => {
+app.get("/profile", async (req, res) => {
   const { token } = req.cookies;
   if (token) {
-    try{
-    jwt.verify(token, secretKey, {}, async (err, userData) => {
-      if (err) throw err;
+    try {
+      const userData = jwt.verify(token, secretKey);
       const { name, email, _id } = await User.findById(userData.id);
       res.json({ name, email, _id });
-    })}
-    catch(error){
-      res.status(500).json({error})
+    } catch (error) {
+      res.status(500).json({ error: "Failed to retrieve user profile" });
     }
   } else {
     res.json(null);
@@ -150,25 +148,24 @@ app.post("/upload", photosMiddleware.array("photos", 100), (req, res) => {
 });
 
 // To create new places
-app.post("/places", (req, res) => {
-
+app.post("/places", async (req, res) => {
   try {
-  const { token } = req.cookies;
-  const {
-    title,
-    address,
-    addedPhotos,
-    description,
-    perks,
-    extraInfo,
-    checkIn,
-    checkOut,
-    maxGuest,
-    price,
-  } = req.body;
+    const { token } = req.cookies;
+    const {
+      title,
+      address,
+      addedPhotos,
+      description,
+      perks,
+      extraInfo,
+      checkIn,
+      checkOut,
+      maxGuest,
+      price,
+    } = req.body;
 
-  jwt.verify(token, secretKey, {}, async (err, userData) => {
-    if (err) throw err;
+    const userData = jwt.verify(token, secretKey);
+
     const placeDoc = await Place.create({
       owner: userData.id,
       title,
@@ -182,23 +179,24 @@ app.post("/places", (req, res) => {
       maxGuest,
       price,
     });
+
     res.json(placeDoc);
-  })} catch (error){
-    res.status(500).json({error})
+  } catch (error) {
+    res.status(500).json({ error: "An error occurred while creating the place." });
   }
 });
 
 // Route to get all places registered/added by the user
-app.get("/user-places", (req, res) => {
-  const { token } = req.cookies;
-  try{
-  jwt.verify(token, secretKey, {}, async (err, userData) => {
-    if (err) throw err;
-    const placeData = await Place.find({ owner : userData.id});
-    res.json(placeData)
-  })}
-  catch(error){
-    res.status(500).json({error})
+
+app.get("/user-places", async (req, res) => {
+  try {
+    const { token } = req.cookies;
+    const userData = jwt.verify(token, secretKey);
+
+    const placeData = await Place.find({ owner: userData.id });
+    res.json(placeData);
+  } catch (error) {
+    res.status(500).json({ error: "An error occurred while fetching user places." });
   }
 });
 
@@ -211,23 +209,24 @@ app.get("/places/:id", async (req, res) => {
 
 // Edit place informations in DB using id of the place
 app.put("/places/:id", async (req, res) => {
-  try{
-  const { id } = req.params;
-  const {
-    title,
-    address,
-    addedPhotos,
-    description,
-    perks,
-    extraInfo,
-    checkIn,
-    checkOut,
-    maxGuest,
-    price,
-  } = req.body;
-  const { token } = req.cookies;
-  jwt.verify(token, secretKey, {}, async (err, userData) => {
-    if (err) throw err;
+  try {
+    const { id } = req.params;
+    const {
+      title,
+      address,
+      addedPhotos,
+      description,
+      perks,
+      extraInfo,
+      checkIn,
+      checkOut,
+      maxGuest,
+      price,
+    } = req.body;
+
+    const { token } = req.cookies;
+    const userData = jwt.verify(token, secretKey);
+
     const placeDoc = await Place.findById(id);
     if (userData.id === placeDoc.owner.toString()) {
       placeDoc.set({
@@ -244,11 +243,13 @@ app.put("/places/:id", async (req, res) => {
       });
       await placeDoc.save();
       res.json("ok");
+    } else {
+      res.status(403).json({ error: "You are not authorized to update this place." });
     }
-  })
-}catch(error){
-  res.status(500).json({error})
-}});
+  } catch (error) {
+    res.status(500).json({ error: "An error occurred while updating the place." });
+  }
+});
 
 //Route to get all places stored in database for index page
 app.get("/places", async (req, res) => {
@@ -256,33 +257,43 @@ app.get("/places", async (req, res) => {
 });
 
 //Route to book a place and store booking informations in db
-app.post("/bookings", (req, res) => {
-  try{
-  const {token} = req.cookies;
-  jwt.verify(token, secretKey, {}, async (err, userData) => {
-    if (err) throw err;
+app.post("/bookings", async (req, res) => {
+  try {
+    const { token } = req.cookies;
+    const userData = jwt.verify(token, secretKey);
+
     const { place, checkIn, checkOut, numberOfNights, name, phone, price } = req.body;
     const bookingData = await Booking.create({
-      place, checkIn, checkOut, user: userData.id,
-      numberOfNights, name, phone, price,
+      place,
+      checkIn,
+      checkOut,
+      user: userData.id,
+      numberOfNights,
+      name,
+      phone,
+      price,
     });
+
     res.json(bookingData);
-  })
-}catch(error){
-  res.status(500).json({error})
-}});
+
+  } catch (error) {
+    res.status(500).json({ error: "An error occurred while creating the booking." });
+  }
+});
 
 // Route to get all bookings made by the user
-app.get("/bookings", (req, res) => {
-  try{
-  const {token} = req.cookies;
-  jwt.verify(token, secretKey, {}, async (err, userData) => {
-    if (err) throw err;
-    res.json(await Booking.find({ user: userData.id }).populate("place"));
-  })  
-}catch(error){
-  res.status(500).json({error})
-}});
+app.get("/bookings", async (req, res) => {
+  try {
+    const { token } = req.cookies;
+    const userData = jwt.verify(token, secretKey);
+
+    const bookings = await Booking.find({ user: userData.id }).populate("place");
+    res.json(bookings);
+  } catch (error) {
+
+    res.status(500).json({ error });
+  }
+});
 
 // start a web server and listen incomming http requests on a specific port
 app.listen(process.env.PORT, () => {
