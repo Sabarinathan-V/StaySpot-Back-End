@@ -102,11 +102,15 @@ app.post("/login", async (req, res) => {
 app.get("/profile", (req, res) => {
   const { token } = req.cookies;
   if (token) {
+    try{
     jwt.verify(token, secretKey, {}, async (err, userData) => {
       if (err) throw err;
       const { name, email, _id } = await User.findById(userData.id);
       res.json({ name, email, _id });
-    });
+    })}
+    catch(error){
+      res.status(500).json({error})
+    }
   } else {
     res.json(null);
   }
@@ -147,6 +151,8 @@ app.post("/upload", photosMiddleware.array("photos", 100), (req, res) => {
 
 // To create new places
 app.post("/places", (req, res) => {
+
+  try {
   const { token } = req.cookies;
   const {
     title,
@@ -177,17 +183,23 @@ app.post("/places", (req, res) => {
       price,
     });
     res.json(placeDoc);
-  });
+  })} catch (error){
+    res.status(500).json({error})
+  }
 });
 
 // Route to get all places registered/added by the user
 app.get("/user-places", (req, res) => {
   const { token } = req.cookies;
+  try{
   jwt.verify(token, secretKey, {}, async (err, userData) => {
     if (err) throw err;
     const placeData = await Place.find({ owner : userData.id});
     res.json(placeData)
-  })
+  })}
+  catch(error){
+    res.status(500).json({error})
+  }
 });
 
 // Route used in Two places in this App for getting Place details using id of the place
@@ -199,6 +211,7 @@ app.get("/places/:id", async (req, res) => {
 
 // Edit place informations in DB using id of the place
 app.put("/places/:id", async (req, res) => {
+  try{
   const { id } = req.params;
   const {
     title,
@@ -232,8 +245,10 @@ app.put("/places/:id", async (req, res) => {
       await placeDoc.save();
       res.json("ok");
     }
-  });
-});
+  })
+}catch(error){
+  res.status(500).json({error})
+}});
 
 //Route to get all places stored in database for index page
 app.get("/places", async (req, res) => {
@@ -242,6 +257,7 @@ app.get("/places", async (req, res) => {
 
 //Route to book a place and store booking informations in db
 app.post("/bookings", (req, res) => {
+  try{
   const {token} = req.cookies;
   jwt.verify(token, secretKey, {}, async (err, userData) => {
     if (err) throw err;
@@ -252,16 +268,21 @@ app.post("/bookings", (req, res) => {
     });
     res.json(bookingData);
   })
-});
+}catch(error){
+  res.status(500).json({error})
+}});
 
 // Route to get all bookings made by the user
 app.get("/bookings", (req, res) => {
+  try{
   const {token} = req.cookies;
   jwt.verify(token, secretKey, {}, async (err, userData) => {
     if (err) throw err;
     res.json(await Booking.find({ user: userData.id }).populate("place"));
   })  
-});
+}catch(error){
+  res.status(500).json({error})
+}});
 
 // start a web server and listen incomming http requests on a specific port
 app.listen(process.env.PORT, () => {
