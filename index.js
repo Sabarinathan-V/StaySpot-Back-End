@@ -116,7 +116,7 @@ app.get("/profile", async (req, res) => {
 
 // Logout from the website
 app.post("/logout", (req, res) => {
-  res.cookie("token", "").json(true);
+  res.cookie("token", "", {secure: true, sameSite: 'none'}).json(true);
 });
 
 // add a photo using image link
