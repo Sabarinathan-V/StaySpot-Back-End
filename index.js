@@ -40,14 +40,14 @@ const secretKey = "RANDOM_JWT_SECRET_KEY";
 mongoose.connect(process.env.MONGO_URI);
 
 // Function to get user information from cookies
-function getUserDataFromToken(req) {
-  return new Promise((resolve, reject) => {
-    jwt.verify(req.cookies.token, secretKey, {}, (err, userDoc) => {
-      if (err) reject(err);
-      resolve(userDoc);
-    });
-  });
-}
+// function getUserDataFromToken(req) {
+//   return new Promise((resolve, reject) => {
+//     jwt.verify(req.cookies.token, secretKey, {}, (err, userDoc) => {
+//       if (err) reject(err);
+//       resolve(userDoc);
+//     });
+//   });
+// }
 
 // To register and get login access
 app.post("/register", async (req, res) => {
@@ -181,11 +181,13 @@ app.post("/places", (req, res) => {
 });
 
 // Route to get all places registered/added by the user
-app.get("/user-places", async (req, res) => {
-  const userData = await getUserDataFromToken(req);
-  const { id } = userData;
-  const placesData = await Place.find({ owner: id });
-  res.json(placesData);
+app.get("/user-places", (req, res) => {
+  const { token } = req.cookies;
+  jwt.verify(token, secretKey, {}, async (err, userData) => {
+    if (err) throw err;
+    const placeData = await Place.find({ owner : userData.id});
+    res.json(placeData)
+  })
 });
 
 // Route used in Two places in this App for getting Place details using id of the place
@@ -239,29 +241,26 @@ app.get("/places", async (req, res) => {
 });
 
 //Route to book a place and store booking informations in db
-app.post("/bookings", async (req, res) => {
-  const userData = await getUserDataFromToken(req);
-  const { place, checkIn, checkOut, numberOfNights, name, phone, price } =
-    req.body;
-
-  const bookingData = await Booking.create({
-    place,
-    checkIn,
-    checkOut,
-    user: userData.id,
-    numberOfNights,
-    name,
-    phone,
-    price,
-  });
-
-  res.json(bookingData);
+app.post("/bookings", (req, res) => {
+  const {token} = req.cookies;
+  jwt.verify(token, secretKey, {}, async (err, userData) => {
+    if (err) throw err;
+    const { place, checkIn, checkOut, numberOfNights, name, phone, price } = req.body;
+    const bookingData = await Booking.create({
+      place, checkIn, checkOut, user: userData.id,
+      numberOfNights, name, phone, price,
+    });
+    res.json(bookingData);
+  })
 });
 
 // Route to get all bookings made by the user
-app.get("/bookings", async (req, res) => {
-  const userData = await getUserDataFromToken(req);
-  res.json(await Booking.find({ user: userData.id }).populate("place"));
+app.get("/bookings", (req, res) => {
+  const {token} = req.cookies;
+  jwt.verify(token, secretKey, {}, async (err, userData) => {
+    if (err) throw err;
+    res.json(await Booking.find({ user: userData.id }).populate("place"));
+  })  
 });
 
 // start a web server and listen incomming http requests on a specific port
